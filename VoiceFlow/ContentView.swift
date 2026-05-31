@@ -1,24 +1,366 @@
-//
-//  ContentView.swift
-//  VoiceFlow
-//
-//  Created by Ritesh Raj Pandit on 31/05/2026.
-//
-
 import SwiftUI
 
 struct ContentView: View {
+    @EnvironmentObject private var model: VoiceFlowModel
+
     var body: some View {
-        VStack {
-            Image(systemName: "globe")
-                .imageScale(.large)
-                .foregroundStyle(.tint)
-            Text("Hello, world!")
+        NavigationSplitView {
+            SidebarView()
+        } detail: {
+            if model.hasCompletedStartupGuide {
+                TranscriptionWorkspaceView()
+            } else {
+                StartupGuideView()
+            }
         }
-        .padding()
+        .frame(minWidth: 940, minHeight: 620)
+    }
+}
+
+private struct SidebarView: View {
+    @EnvironmentObject private var model: VoiceFlowModel
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 18) {
+            VStack(alignment: .leading, spacing: 8) {
+                Label("VoiceFlow", systemImage: "waveform.and.mic")
+                    .font(.title2.weight(.semibold))
+                Text("Local voice to text")
+                    .font(.subheadline)
+                    .foregroundStyle(.secondary)
+            }
+
+            StatusCardView()
+
+            VStack(alignment: .leading, spacing: 10) {
+                Text("Shortcuts")
+                    .font(.headline)
+                ShortcutRowView(title: "Start", shortcut: model.startShortcut)
+                ShortcutRowView(title: "Stop", shortcut: model.stopShortcut)
+            }
+
+            VStack(alignment: .leading, spacing: 10) {
+                Text("Compliance")
+                    .font(.headline)
+                ComplianceRowView(icon: "lock.shield", text: "Audio stays on this Mac")
+                ComplianceRowView(icon: "network.slash", text: "No cloud transcription path")
+                ComplianceRowView(icon: "person.crop.circle.badge.checkmark", text: "Ask consent before recording others")
+            }
+
+            Spacer()
+
+            Text(model.latestNotice)
+                .font(.caption)
+                .foregroundStyle(.secondary)
+                .lineLimit(3)
+        }
+        .padding(22)
+        .navigationSplitViewColumnWidth(min: 270, ideal: 300, max: 340)
+    }
+}
+
+private struct StatusCardView: View {
+    @EnvironmentObject private var model: VoiceFlowModel
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 12) {
+            HStack(spacing: 10) {
+                Image(systemName: model.status.systemImage)
+                    .font(.title2)
+                    .foregroundStyle(model.status.tint)
+                    .frame(width: 28)
+                VStack(alignment: .leading, spacing: 2) {
+                    Text(model.status.title)
+                        .font(.headline)
+                    Text(model.modelBundle.isAvailable ? "Whisper tiny.en bundle found" : "Whisper bundle missing")
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+                }
+            }
+
+            Button {
+                model.toggleRecording()
+            } label: {
+                Label(model.isRecording ? "Stop Recording" : "Start Recording", systemImage: model.isRecording ? "stop.fill" : "mic.fill")
+                    .frame(maxWidth: .infinity)
+            }
+            .buttonStyle(.borderedProminent)
+            .tint(model.isRecording ? .red : .accentColor)
+            .disabled(model.isProcessing)
+        }
+        .padding(16)
+        .background(.regularMaterial, in: RoundedRectangle(cornerRadius: 8, style: .continuous))
+    }
+}
+
+private struct TranscriptionWorkspaceView: View {
+    @EnvironmentObject private var model: VoiceFlowModel
+
+    var body: some View {
+        VStack(spacing: 0) {
+            HeaderBarView()
+
+            Divider()
+
+            VStack(alignment: .leading, spacing: 16) {
+                HStack {
+                    Text("Transcript")
+                        .font(.title2.weight(.semibold))
+                    Spacer()
+                    Button {
+                        model.resetTranscript()
+                    } label: {
+                        Label("Clear", systemImage: "trash")
+                    }
+                    .disabled(model.transcript.isEmpty)
+                }
+
+                TextEditor(text: $model.transcript)
+                    .font(.system(.body, design: .rounded))
+                    .scrollContentBackground(.hidden)
+                    .padding(12)
+                    .background(Color(nsColor: .textBackgroundColor), in: RoundedRectangle(cornerRadius: 8, style: .continuous))
+                    .overlay {
+                        if model.transcript.isEmpty {
+                            VStack {
+                                Image(systemName: "text.bubble")
+                                    .font(.largeTitle)
+                                    .foregroundStyle(.tertiary)
+                                Text("Your transcribed text will appear here.")
+                                    .foregroundStyle(.secondary)
+                            }
+                            .allowsHitTesting(false)
+                        }
+                    }
+            }
+            .padding(28)
+        }
+    }
+}
+
+private struct HeaderBarView: View {
+    @EnvironmentObject private var model: VoiceFlowModel
+
+    var body: some View {
+        HStack(spacing: 16) {
+            VStack(alignment: .leading, spacing: 4) {
+                Text("Voice capture")
+                    .font(.title.weight(.semibold))
+                Text("Use the keyboard shortcuts or the menu bar icon to capture short dictated notes.")
+                    .foregroundStyle(.secondary)
+            }
+
+            Spacer()
+
+            if model.isProcessing {
+                ProgressView()
+                    .controlSize(.small)
+            }
+
+            Button {
+                model.startRecording()
+            } label: {
+                Label("Start", systemImage: "mic.fill")
+            }
+            .keyboardShortcut(model.startShortcut.keyEquivalent, modifiers: model.startShortcut.eventModifiers)
+            .disabled(model.isRecording || model.isProcessing)
+
+            Button {
+                model.stopRecording()
+            } label: {
+                Label("Stop", systemImage: "stop.fill")
+            }
+            .keyboardShortcut(model.stopShortcut.keyEquivalent, modifiers: model.stopShortcut.eventModifiers)
+            .disabled(!model.isRecording)
+        }
+        .padding(28)
+    }
+}
+
+private struct StartupGuideView: View {
+    @EnvironmentObject private var model: VoiceFlowModel
+
+    var body: some View {
+        ScrollView {
+            VStack(alignment: .leading, spacing: 28) {
+                VStack(alignment: .leading, spacing: 10) {
+                    Image(systemName: "waveform.and.mic")
+                        .font(.system(size: 52, weight: .semibold))
+                        .foregroundStyle(.tint)
+                    Text("Set up local transcription")
+                        .font(.largeTitle.weight(.bold))
+                    Text("VoiceFlow is designed for private, local dictation with a bundled Whisper tiny.en model and explicit microphone control.")
+                        .font(.title3)
+                        .foregroundStyle(.secondary)
+                        .fixedSize(horizontal: false, vertical: true)
+                }
+
+                LazyVGrid(columns: [GridItem(.adaptive(minimum: 240), spacing: 16)], spacing: 16) {
+                    GuideStepView(number: "1", title: "Bundle the model", detail: "Add openai/whisper-tiny.en files to app Resources/whisper-tiny.en before production transcription is enabled.")
+                    GuideStepView(number: "2", title: "Grant microphone access", detail: "macOS will prompt on first recording. The app records mono 16 kHz WAV audio for the local runtime.")
+                    GuideStepView(number: "3", title: "Use shortcuts", detail: "Defaults are Control + Shift + J to start and Control + Shift + K to stop. You can change them in Settings.")
+                    GuideStepView(number: "4", title: "Respect consent", detail: "Use transcription only where you have permission and avoid high-risk decisions from raw transcripts.")
+                }
+
+                ModelReadinessView()
+
+                HStack {
+                    Button {
+                        model.completeStartupGuide()
+                    } label: {
+                        Label("Continue", systemImage: "arrow.right")
+                            .frame(minWidth: 150)
+                    }
+                    .buttonStyle(.borderedProminent)
+                    Spacer()
+                }
+            }
+            .padding(34)
+            .frame(maxWidth: 920, alignment: .leading)
+        }
+    }
+}
+
+private struct ModelReadinessView: View {
+    @EnvironmentObject private var model: VoiceFlowModel
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 12) {
+            Label(model.modelBundle.isAvailable ? "Model bundle detected" : "Model bundle not detected", systemImage: model.modelBundle.isAvailable ? "checkmark.seal.fill" : "exclamationmark.triangle.fill")
+                .font(.headline)
+                .foregroundStyle(model.modelBundle.isAvailable ? .green : .orange)
+            Text(model.modelBundle.displayPath)
+                .font(.system(.callout, design: .monospaced))
+                .foregroundStyle(.secondary)
+                .textSelection(.enabled)
+            Text("The Hugging Face checkpoint includes model files and processor assets. The native runtime still needs to be connected behind the transcription service before release builds produce text.")
+                .foregroundStyle(.secondary)
+        }
+        .padding(18)
+        .background(.regularMaterial, in: RoundedRectangle(cornerRadius: 8, style: .continuous))
+    }
+}
+
+private struct GuideStepView: View {
+    let number: String
+    let title: String
+    let detail: String
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 12) {
+            Text(number)
+                .font(.headline)
+                .foregroundStyle(.white)
+                .frame(width: 28, height: 28)
+                .background(Circle().fill(Color.accentColor))
+            Text(title)
+                .font(.headline)
+            Text(detail)
+                .font(.callout)
+                .foregroundStyle(.secondary)
+                .fixedSize(horizontal: false, vertical: true)
+        }
+        .frame(maxWidth: .infinity, minHeight: 154, alignment: .topLeading)
+        .padding(16)
+        .background(Color(nsColor: .controlBackgroundColor), in: RoundedRectangle(cornerRadius: 8, style: .continuous))
+    }
+}
+
+struct SettingsView: View {
+    @EnvironmentObject private var model: VoiceFlowModel
+
+    var body: some View {
+        Form {
+            Section("Keyboard Shortcuts") {
+                ShortcutPickerView(title: "Start recording", shortcut: $model.startShortcut)
+                ShortcutPickerView(title: "Stop recording", shortcut: $model.stopShortcut)
+            }
+
+            Section("Model") {
+                LabeledContent("Bundle status", value: model.modelBundle.isAvailable ? "Ready" : "Missing")
+                Text(model.modelBundle.displayPath)
+                    .font(.system(.caption, design: .monospaced))
+                    .foregroundStyle(.secondary)
+                    .textSelection(.enabled)
+            }
+        }
+        .formStyle(.grouped)
+        .padding(20)
+        .frame(width: 520, height: 300)
+    }
+}
+
+private struct ShortcutPickerView: View {
+    let title: String
+    @Binding var shortcut: ShortcutDefinition
+
+    private let keys = Array("ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789").map(String.init)
+
+    var body: some View {
+        HStack {
+            Text(title)
+            Spacer()
+            Toggle("Control", isOn: modifierBinding(.control))
+            Toggle("Shift", isOn: modifierBinding(.shift))
+            Toggle("Option", isOn: modifierBinding(.option))
+            Toggle("Command", isOn: modifierBinding(.command))
+            Picker("Key", selection: $shortcut.key) {
+                ForEach(keys, id: \.self) { key in
+                    Text(key).tag(key)
+                }
+            }
+            .frame(width: 76)
+            Text(shortcut.displayText)
+                .font(.system(.caption, design: .monospaced))
+                .foregroundStyle(.secondary)
+                .frame(width: 150, alignment: .trailing)
+        }
+    }
+
+    private func modifierBinding(_ modifier: ShortcutModifiers) -> Binding<Bool> {
+        Binding {
+            shortcut.modifiers.contains(modifier)
+        } set: { isEnabled in
+            if isEnabled {
+                shortcut.modifiers.insert(modifier)
+            } else {
+                shortcut.modifiers.remove(modifier)
+            }
+        }
+    }
+}
+
+private struct ShortcutRowView: View {
+    let title: String
+    let shortcut: ShortcutDefinition
+
+    var body: some View {
+        HStack {
+            Text(title)
+                .foregroundStyle(.secondary)
+            Spacer()
+            Text(shortcut.displayText)
+                .font(.system(.caption, design: .monospaced))
+                .padding(.horizontal, 8)
+                .padding(.vertical, 4)
+                .background(Color(nsColor: .controlBackgroundColor), in: RoundedRectangle(cornerRadius: 6, style: .continuous))
+        }
+    }
+}
+
+private struct ComplianceRowView: View {
+    let icon: String
+    let text: String
+
+    var body: some View {
+        Label(text, systemImage: icon)
+            .font(.callout)
+            .foregroundStyle(.secondary)
+            .labelStyle(.titleAndIcon)
     }
 }
 
 #Preview {
     ContentView()
+        .environmentObject(VoiceFlowModel())
 }
