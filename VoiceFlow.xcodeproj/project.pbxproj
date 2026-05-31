@@ -6,13 +6,32 @@
 	objectVersion = 77;
 	objects = {
 
+/* Begin PBXBuildFile section */
+		BFD6BFC22FCCAC8800234931 /* WhisperKit in Frameworks */ = {isa = PBXBuildFile; productRef = BFD6BFC12FCCAC8800234931 /* WhisperKit */; };
+		BFD6BFE72FCCB2D600234931 /* Models in Resources */ = {isa = PBXBuildFile; fileRef = BFD6BFE62FCCB2D600234931 /* Models */; };
+/* End PBXBuildFile section */
+
 /* Begin PBXFileReference section */
 		BFCB59E12FCC144100A34BF6 /* VoiceFlow.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = VoiceFlow.app; sourceTree = BUILT_PRODUCTS_DIR; };
+		BFD6BFE62FCCB2D600234931 /* Models */ = {isa = PBXFileReference; lastKnownFileType = folder; name = Models; path = VoiceFlow/VoiceFlow/Models; sourceTree = "<group>"; };
 /* End PBXFileReference section */
+
+/* Begin PBXFileSystemSynchronizedBuildFileExceptionSet section */
+		BFD6BFC62FCCAEE600234931 /* Exceptions for "VoiceFlow" folder in "VoiceFlow" target */ = {
+			isa = PBXFileSystemSynchronizedBuildFileExceptionSet;
+			membershipExceptions = (
+				Info.plist,
+			);
+			target = BFCB59E02FCC144100A34BF6 /* VoiceFlow */;
+		};
+/* End PBXFileSystemSynchronizedBuildFileExceptionSet section */
 
 /* Begin PBXFileSystemSynchronizedRootGroup section */
 		BFCB59E32FCC144100A34BF6 /* VoiceFlow */ = {
 			isa = PBXFileSystemSynchronizedRootGroup;
+			exceptions = (
+				BFD6BFC62FCCAEE600234931 /* Exceptions for "VoiceFlow" folder in "VoiceFlow" target */,
+			);
 			path = VoiceFlow;
 			sourceTree = "<group>";
 		};
@@ -23,6 +42,7 @@
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				BFD6BFC22FCCAC8800234931 /* WhisperKit in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -32,6 +52,7 @@
 		BFCB59D82FCC144100A34BF6 = {
 			isa = PBXGroup;
 			children = (
+				BFD6BFE62FCCB2D600234931 /* Models */,
 				BFCB59E32FCC144100A34BF6 /* VoiceFlow */,
 				BFCB59E22FCC144100A34BF6 /* Products */,
 			);
@@ -65,6 +86,7 @@
 			);
 			name = VoiceFlow;
 			packageProductDependencies = (
+				BFD6BFC12FCCAC8800234931 /* WhisperKit */,
 			);
 			productName = VoiceFlow;
 			productReference = BFCB59E12FCC144100A34BF6 /* VoiceFlow.app */;
@@ -94,6 +116,9 @@
 			);
 			mainGroup = BFCB59D82FCC144100A34BF6;
 			minimizedProjectReferenceProxies = 1;
+			packageReferences = (
+				BFD6BFC02FCCAC8800234931 /* XCRemoteSwiftPackageReference "argmax-oss-swift" */,
+			);
 			preferredProjectObjectVersion = 77;
 			productRefGroup = BFCB59E22FCC144100A34BF6 /* Products */;
 			projectDirPath = "";
@@ -109,6 +134,7 @@
 			isa = PBXResourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				BFD6BFE72FCCB2D600234931 /* Models in Resources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -252,9 +278,20 @@
 				COMBINE_HIDPI_IMAGES = YES;
 				CURRENT_PROJECT_VERSION = 1;
 				ENABLE_APP_SANDBOX = YES;
+				ENABLE_INCOMING_NETWORK_CONNECTIONS = NO;
+				ENABLE_OUTGOING_NETWORK_CONNECTIONS = NO;
 				ENABLE_PREVIEWS = YES;
+				ENABLE_RESOURCE_ACCESS_AUDIO_INPUT = YES;
+				ENABLE_RESOURCE_ACCESS_BLUETOOTH = NO;
+				ENABLE_RESOURCE_ACCESS_CALENDARS = NO;
+				ENABLE_RESOURCE_ACCESS_CAMERA = NO;
+				ENABLE_RESOURCE_ACCESS_CONTACTS = NO;
+				ENABLE_RESOURCE_ACCESS_LOCATION = NO;
+				ENABLE_RESOURCE_ACCESS_PRINTING = NO;
+				ENABLE_RESOURCE_ACCESS_USB = NO;
 				ENABLE_USER_SELECTED_FILES = readonly;
 				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_FILE = VoiceFlow/Info.plist;
 				INFOPLIST_KEY_NSHumanReadableCopyright = "";
 				LD_RUNPATH_SEARCH_PATHS = (
 					"$(inherited)",
@@ -282,9 +319,20 @@
 				COMBINE_HIDPI_IMAGES = YES;
 				CURRENT_PROJECT_VERSION = 1;
 				ENABLE_APP_SANDBOX = YES;
+				ENABLE_INCOMING_NETWORK_CONNECTIONS = NO;
+				ENABLE_OUTGOING_NETWORK_CONNECTIONS = NO;
 				ENABLE_PREVIEWS = YES;
+				ENABLE_RESOURCE_ACCESS_AUDIO_INPUT = YES;
+				ENABLE_RESOURCE_ACCESS_BLUETOOTH = NO;
+				ENABLE_RESOURCE_ACCESS_CALENDARS = NO;
+				ENABLE_RESOURCE_ACCESS_CAMERA = NO;
+				ENABLE_RESOURCE_ACCESS_CONTACTS = NO;
+				ENABLE_RESOURCE_ACCESS_LOCATION = NO;
+				ENABLE_RESOURCE_ACCESS_PRINTING = NO;
+				ENABLE_RESOURCE_ACCESS_USB = NO;
 				ENABLE_USER_SELECTED_FILES = readonly;
 				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_FILE = VoiceFlow/Info.plist;
 				INFOPLIST_KEY_NSHumanReadableCopyright = "";
 				LD_RUNPATH_SEARCH_PATHS = (
 					"$(inherited)",
@@ -325,6 +373,25 @@
 			defaultConfigurationName = Release;
 		};
 /* End XCConfigurationList section */
+
+/* Begin XCRemoteSwiftPackageReference section */
+		BFD6BFC02FCCAC8800234931 /* XCRemoteSwiftPackageReference "argmax-oss-swift" */ = {
+			isa = XCRemoteSwiftPackageReference;
+			repositoryURL = "https://github.com/argmaxinc/argmax-oss-swift";
+			requirement = {
+				branch = main;
+				kind = branch;
+			};
+		};
+/* End XCRemoteSwiftPackageReference section */
+
+/* Begin XCSwiftPackageProductDependency section */
+		BFD6BFC12FCCAC8800234931 /* WhisperKit */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = BFD6BFC02FCCAC8800234931 /* XCRemoteSwiftPackageReference "argmax-oss-swift" */;
+			productName = WhisperKit;
+		};
+/* End XCSwiftPackageProductDependency section */
 	};
 	rootObject = BFCB59D92FCC144100A34BF6 /* Project object */;
 }

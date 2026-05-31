@@ -12,7 +12,7 @@ struct VoiceFlowApp: App {
         .commands {
             CommandMenu("VoiceFlow") {
                 Button("Start Recording", systemImage: "mic.fill") {
-                    model.startRecording()
+                    model.startSystemWideRecording()
                 }
                 .keyboardShortcut(model.startShortcut.keyEquivalent, modifiers: model.startShortcut.eventModifiers)
                 .disabled(model.isRecording || model.isProcessing)
@@ -72,7 +72,7 @@ private struct MenuBarStatusView: View {
 
             HStack {
                 Button {
-                    model.startRecording()
+                    model.startSystemWideRecording()
                 } label: {
                     Label("Start", systemImage: "mic.fill")
                 }
@@ -91,9 +91,18 @@ private struct MenuBarStatusView: View {
             VStack(alignment: .leading, spacing: 6) {
                 Text("Start: \(model.startShortcut.displayText)")
                 Text("Stop: \(model.stopShortcut.displayText)")
+                Text(model.isAccessibilityTrusted ? "Accessibility: Ready" : "Accessibility: Required")
             }
             .font(.system(.caption, design: .monospaced))
             .foregroundStyle(.secondary)
+
+            if !model.isAccessibilityTrusted {
+                Button {
+                    model.requestAccessibilityPermission()
+                } label: {
+                    Label("Request Permission", systemImage: "gearshape")
+                }
+            }
         }
         .padding(18)
         .frame(width: 320)

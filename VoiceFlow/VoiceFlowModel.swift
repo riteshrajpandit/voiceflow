@@ -9,6 +9,7 @@ import SwiftUI
 final class VoiceFlowModel {
     var isRecording = false
     var isProcessing = false
+    var isAccessibilityTrusted = false
     var hasCompletedStartupGuide = UserDefaults.standard.bool(forKey: DefaultsKey.hasCompletedStartupGuide)
     var transcript = ""
     var latestNotice = "Ready"
@@ -29,12 +30,29 @@ final class VoiceFlowModel {
 
     private let recorder = AudioRecorder()
     private let transcriber = WhisperTranscriptionService()
+    private let textInserter = TextInsertionService()
     private let hotKeyCenter = HotKeyCenter()
+    @ObservationIgnored private var activationObserver: NSObjectProtocol?
     private var recordingURL: URL?
+    private var shouldInsertTranscription = false
+    private var insertionTargetApplication: NSRunningApplication?
+    private var lastExternalApplication: NSRunningApplication?
 
     init() {
         startShortcut = ShortcutDefinition.load(from: DefaultsKey.startShortcut) ?? .defaultStart
         stopShortcut = ShortcutDefinition.load(from: DefaultsKey.stopShortcut) ?? .defaultStop
+        refreshAccessibilityStatus()
+        updateLastExternalApplication(NSWorkspace.shared.frontmostApplication)
+        activationObserver = NSWorkspace.shared.notificationCenter.addObserver(
+            forName: NSWorkspace.didActivateApplicationNotification,
+            object: nil,
+            queue: .main
+        ) { notification in
+            guard let application = notification.userInfo?[NSWorkspace.applicationUserInfoKey] as? NSRunningApplication else { return }
+            Task { @MainActor [weak self] in
+                self?.updateLastExternalApplication(application)
+            }
+        }
         registerShortcuts()
     }
 
@@ -50,25 +68,45 @@ final class VoiceFlowModel {
         UserDefaults.standard.set(true, forKey: DefaultsKey.hasCompletedStartupGuide)
     }
 
+    func refreshAccessibilityStatus() {
+        isAccessibilityTrusted = textInserter.isAccessibilityTrusted
+    }
+
+    func requestAccessibilityPermission() {
+        if textInserter.requestAccessibilityPermission() {
+            latestNotice = "Accessibility permission granted"
+        } else {
+            latestNotice = "Approve VoiceFlow in System Settings > Privacy & Security > Accessibility"
+        }
+        refreshAccessibilityStatus()
+    }
+
     func toggleRecording() {
         if isRecording {
             stopRecording()
         } else {
-            startRecording()
+            startSystemWideRecording()
         }
     }
 
-    func startRecording() {
+    func startSystemWideRecording() {
+        startRecording(shouldInsertResult: true)
+    }
+
+    func startRecording(shouldInsertResult: Bool = false) {
         guard !isRecording else { return }
 
         Task {
             do {
                 latestNotice = "Requesting microphone access"
                 try await recorder.requestPermission()
+                refreshAccessibilityStatus()
+                shouldInsertTranscription = shouldInsertResult
+                insertionTargetApplication = shouldInsertResult ? preferredInsertionTarget() : nil
                 let url = try recorder.start()
                 recordingURL = url
                 isRecording = true
-                latestNotice = "Recording"
+                latestNotice = shouldInsertResult ? "Recording for focused app" : "Recording"
             } catch {
                 latestNotice = error.localizedDescription
             }
@@ -86,6 +124,8 @@ final class VoiceFlowModel {
             transcribe(url)
         } catch {
             isRecording = false
+            shouldInsertTranscription = false
+            insertionTargetApplication = nil
             latestNotice = error.localizedDescription
         }
     }
@@ -100,18 +140,47 @@ final class VoiceFlowModel {
             do {
                 let text = try await transcriber.transcribe(audioURL: url, modelBundle: modelBundle)
                 transcript = text
-                latestNotice = text.isEmpty ? "No speech detected" : "Transcript ready"
+                if shouldInsertTranscription, !text.isEmpty {
+                    try textInserter.insert(text, into: insertionTargetApplication)
+                    latestNotice = "Inserted transcript into focused app"
+                } else {
+                    latestNotice = text.isEmpty ? "No speech detected" : "Transcript ready"
+                }
+                shouldInsertTranscription = false
+                insertionTargetApplication = nil
             } catch {
                 latestNotice = error.localizedDescription
+            }
+            if !isRecording {
+                shouldInsertTranscription = false
+                insertionTargetApplication = nil
             }
             isProcessing = false
         }
     }
 
+    private func preferredInsertionTarget() -> NSRunningApplication? {
+        let frontmostApplication = NSWorkspace.shared.frontmostApplication
+        if isExternalApplication(frontmostApplication) {
+            return frontmostApplication
+        }
+        return lastExternalApplication
+    }
+
+    private func updateLastExternalApplication(_ application: NSRunningApplication?) {
+        guard isExternalApplication(application) else { return }
+        lastExternalApplication = application
+    }
+
+    private func isExternalApplication(_ application: NSRunningApplication?) -> Bool {
+        guard let application else { return false }
+        return application.bundleIdentifier != Bundle.main.bundleIdentifier
+    }
+
     private func registerShortcuts() {
         hotKeyCenter.unregisterAll()
         hotKeyCenter.register(startShortcut) { [weak self] in
-            Task { @MainActor in self?.startRecording() }
+            Task { @MainActor in self?.startSystemWideRecording() }
         }
         hotKeyCenter.register(stopShortcut) { [weak self] in
             Task { @MainActor in self?.stopRecording() }
@@ -160,38 +229,45 @@ private enum DefaultsKey {
 }
 
 struct WhisperModelBundle {
-    private let folderName = "whisper-tiny.en"
+    let modelName = "openai_whisper-small.en"
+    let subdirectory = "Models"
 
-    var modelDirectory: URL? {
-        Bundle.main.url(forResource: folderName, withExtension: nil)
+    nonisolated var modelDirectory: URL? {
+        Bundle.main.url(forResource: modelName, withExtension: nil, subdirectory: subdirectory)
     }
 
-    var isAvailable: Bool {
+    nonisolated var isAvailable: Bool {
         guard let modelDirectory else { return false }
-        let requiredFiles = ["config.json", "tokenizer.json", "preprocessor_config.json"]
-        return requiredFiles.allSatisfy { fileName in
-            FileManager.default.fileExists(atPath: modelDirectory.appendingPathComponent(fileName).path)
+        let requiredEntries = [
+            "AudioEncoder.mlmodelc",
+            "TextDecoder.mlmodelc",
+            "MelSpectrogram.mlmodelc",
+            "config.json",
+            "generation_config.json",
+            "tokenizer.json",
+            "tokenizer_config.json"
+        ]
+        return requiredEntries.allSatisfy { entry in
+            FileManager.default.fileExists(atPath: modelDirectory.appendingPathComponent(entry).path)
         }
     }
 
-    var displayPath: String {
-        modelDirectory?.path ?? "Bundle Resources/whisper-tiny.en"
+    nonisolated var displayPath: String {
+        modelDirectory?.path ?? "Bundle Resources/Models/\(modelName)"
     }
 }
 
 final class WhisperTranscriptionService {
-    func transcribe(audioURL: URL, modelBundle: WhisperModelBundle) async throws -> String {
-        guard modelBundle.isAvailable else {
-            throw VoiceFlowError.modelMissing
-        }
+    private let whisperKitTranscriber = WhisperKitTranscriber()
 
+    func transcribe(audioURL: URL, modelBundle: WhisperModelBundle) async throws -> String {
         let attributes = try FileManager.default.attributesOfItem(atPath: audioURL.path)
         let byteCount = attributes[.size] as? Int64 ?? 0
         guard byteCount > 0 else {
             throw VoiceFlowError.emptyRecording
         }
 
-        throw VoiceFlowError.runtimeNotConfigured
+        return try await whisperKitTranscriber.transcribe(audioURL: audioURL, modelBundle: modelBundle)
     }
 }
 
@@ -251,7 +327,10 @@ enum VoiceFlowError: LocalizedError {
     case noActiveRecording
     case emptyRecording
     case modelMissing
+    case whisperKitMissing
     case runtimeNotConfigured
+    case accessibilityPermissionMissing
+    case textInsertionFailed
 
     var errorDescription: String? {
         switch self {
@@ -264,9 +343,15 @@ enum VoiceFlowError: LocalizedError {
         case .emptyRecording:
             "The recording did not contain audio data."
         case .modelMissing:
-            "Bundle the openai/whisper-tiny.en files in Resources/whisper-tiny.en before enabling local transcription."
+            "Bundle the WhisperKit Core ML model at Resources/Models/openai_whisper-small.en before shipping offline transcription."
+        case .whisperKitMissing:
+            "Add the WhisperKit package product from https://github.com/argmaxinc/argmax-oss-swift to enable local transcription."
         case .runtimeNotConfigured:
-            "The Whisper runtime is not connected yet. Add a Core ML, whisper.cpp, or WhisperKit backend behind WhisperTranscriptionService."
+            "The Whisper runtime could not be initialized. Check that the bundled model folder is complete and compatible with WhisperKit."
+        case .accessibilityPermissionMissing:
+            "Approve VoiceFlow in System Settings > Privacy & Security > Accessibility so it can paste into the focused app."
+        case .textInsertionFailed:
+            "VoiceFlow could not insert text into the focused app."
         }
     }
 }

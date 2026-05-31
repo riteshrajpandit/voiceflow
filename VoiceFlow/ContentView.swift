@@ -43,6 +43,7 @@ private struct SidebarView: View {
                 Text("Compliance")
                     .font(.headline)
                 ComplianceRowView(icon: "lock.shield", text: "Audio stays on this Mac")
+                ComplianceRowView(icon: "keyboard", text: model.isAccessibilityTrusted ? "Can paste into focused apps" : "Accessibility permission needed")
                 ComplianceRowView(icon: "network.slash", text: "No cloud transcription path")
                 ComplianceRowView(icon: "person.crop.circle.badge.checkmark", text: "Ask consent before recording others")
             }
@@ -72,7 +73,7 @@ private struct StatusCardView: View {
                 VStack(alignment: .leading, spacing: 2) {
                     Text(model.status.title)
                         .font(.headline)
-                    Text(model.modelBundle.isAvailable ? "Whisper tiny.en bundle found" : "Whisper bundle missing")
+                    Text(model.modelBundle.isAvailable ? "WhisperKit small.en bundle found" : "WhisperKit bundle missing")
                         .font(.caption)
                         .foregroundStyle(.secondary)
                 }
@@ -148,7 +149,7 @@ private struct HeaderBarView: View {
             VStack(alignment: .leading, spacing: 4) {
                 Text("Voice capture")
                     .font(.title.weight(.semibold))
-                Text("Use the keyboard shortcuts or the menu bar icon to capture short dictated notes.")
+                Text("Use the keyboard shortcuts or menu bar icon to dictate into the focused app.")
                     .foregroundStyle(.secondary)
             }
 
@@ -160,7 +161,7 @@ private struct HeaderBarView: View {
             }
 
             Button {
-                model.startRecording()
+                model.startSystemWideRecording()
             } label: {
                 Label("Start", systemImage: "mic.fill")
             }
@@ -191,19 +192,21 @@ private struct StartupGuideView: View {
                         .foregroundStyle(.tint)
                     Text("Set up local transcription")
                         .font(.largeTitle.weight(.bold))
-                    Text("VoiceFlow is designed for private, local dictation with a bundled Whisper tiny.en model and explicit microphone control.")
+                    Text("VoiceFlow is designed for private, local dictation with a bundled WhisperKit Core ML small.en model and explicit microphone control.")
                         .font(.title3)
                         .foregroundStyle(.secondary)
                         .fixedSize(horizontal: false, vertical: true)
                 }
 
                 LazyVGrid(columns: [GridItem(.adaptive(minimum: 240), spacing: 16)], spacing: 16) {
-                    GuideStepView(number: "1", title: "Bundle the model", detail: "Add openai/whisper-tiny.en files to app Resources/whisper-tiny.en before production transcription is enabled.")
+                    GuideStepView(number: "1", title: "Bundle the model", detail: "Add the WhisperKit Core ML folder at Resources/Models/openai_whisper-small.en before shipping offline transcription.")
                     GuideStepView(number: "2", title: "Grant microphone access", detail: "macOS will prompt on first recording. The app records mono 16 kHz WAV audio for the local runtime.")
-                    GuideStepView(number: "3", title: "Use shortcuts", detail: "Defaults are Control + Shift + J to start and Control + Shift + K to stop. You can change them in Settings.")
-                    GuideStepView(number: "4", title: "Respect consent", detail: "Use transcription only where you have permission and avoid high-risk decisions from raw transcripts.")
+                    GuideStepView(number: "3", title: "Approve Accessibility", detail: "VoiceFlow needs Accessibility permission to paste transcribed text into Terminal, search bars, editors, and other focused apps.")
+                    GuideStepView(number: "4", title: "Use shortcuts", detail: "Defaults are Control + Shift + J to start and Control + Shift + K to stop. You can change them in Settings.")
+                    GuideStepView(number: "5", title: "Respect consent", detail: "Use transcription only where you have permission and avoid high-risk decisions from raw transcripts.")
                 }
 
+                PermissionReadinessView()
                 ModelReadinessView()
 
                 HStack {
@@ -220,6 +223,35 @@ private struct StartupGuideView: View {
             .padding(34)
             .frame(maxWidth: 920, alignment: .leading)
         }
+    }
+}
+
+private struct PermissionReadinessView: View {
+    @Environment(VoiceFlowModel.self) private var model
+
+    var body: some View {
+        HStack(alignment: .top, spacing: 14) {
+            Image(systemName: model.isAccessibilityTrusted ? "checkmark.seal.fill" : "hand.raised.fill")
+                .font(.title2)
+                .foregroundStyle(model.isAccessibilityTrusted ? .green : .orange)
+                .frame(width: 28)
+
+            VStack(alignment: .leading, spacing: 8) {
+                Text(model.isAccessibilityTrusted ? "Accessibility permission ready" : "Accessibility permission required")
+                    .font(.headline)
+                Text("System-wide dictation uses Accessibility to send Command + V into whichever text field is focused after transcription.")
+                    .foregroundStyle(.secondary)
+                if !model.isAccessibilityTrusted {
+                    Button {
+                        model.requestAccessibilityPermission()
+                    } label: {
+                        Label("Request Permission", systemImage: "gearshape")
+                    }
+                }
+            }
+        }
+        .padding(18)
+        .background(.regularMaterial, in: RoundedRectangle(cornerRadius: 8, style: .continuous))
     }
 }
 
@@ -278,6 +310,15 @@ struct SettingsView: View {
             Section("Keyboard Shortcuts") {
                 ShortcutPickerView(title: "Start recording", shortcut: $model.startShortcut)
                 ShortcutPickerView(title: "Stop recording", shortcut: $model.stopShortcut)
+            }
+
+            Section("System-wide Dictation") {
+                LabeledContent("Accessibility", value: model.isAccessibilityTrusted ? "Ready" : "Required")
+                if !model.isAccessibilityTrusted {
+                    Button("Request Accessibility Permission") {
+                        model.requestAccessibilityPermission()
+                    }
+                }
             }
 
             Section("Model") {
