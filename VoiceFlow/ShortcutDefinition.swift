@@ -24,7 +24,7 @@ struct ShortcutDefinition: Codable, Equatable, Hashable {
         KeyEquivalent(Character(key.lowercased()))
     }
 
-    var eventModifiers: EventModifiers {
+    var eventModifiers: SwiftUI.EventModifiers {
         modifiers.eventModifiers
     }
 
@@ -83,8 +83,8 @@ struct ShortcutModifiers: OptionSet, Codable, Hashable {
         return flags
     }
 
-    var eventModifiers: EventModifiers {
-        var modifiers = EventModifiers()
+    var eventModifiers: SwiftUI.EventModifiers {
+        var modifiers = SwiftUI.EventModifiers()
         if contains(.command) { modifiers.insert(.command) }
         if contains(.shift) { modifiers.insert(.shift) }
         if contains(.option) { modifiers.insert(.option) }
@@ -105,7 +105,7 @@ final class HotKeyCenter {
 
         let identifier = nextIdentifier
         nextIdentifier += 1
-        var hotKeyID = EventHotKeyID(signature: OSType("VFLW".fourCharacterCode), id: identifier)
+        let hotKeyID = EventHotKeyID(signature: OSType("VFLW".fourCharacterCode), id: identifier)
         var hotKeyRef: EventHotKeyRef?
         let status = RegisterEventHotKey(keyCode, shortcut.carbonModifiers, hotKeyID, GetApplicationEventTarget(), 0, &hotKeyRef)
 

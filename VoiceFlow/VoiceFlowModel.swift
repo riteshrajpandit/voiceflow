@@ -1,22 +1,24 @@
 import AppKit
 import AVFoundation
 import Carbon.HIToolbox
+import Observation
 import SwiftUI
 
 @MainActor
-final class VoiceFlowModel: ObservableObject {
-    @Published var isRecording = false
-    @Published var isProcessing = false
-    @Published var hasCompletedStartupGuide = UserDefaults.standard.bool(forKey: DefaultsKey.hasCompletedStartupGuide)
-    @Published var transcript = ""
-    @Published var latestNotice = "Ready"
-    @Published var startShortcut: ShortcutDefinition {
+@Observable
+final class VoiceFlowModel {
+    var isRecording = false
+    var isProcessing = false
+    var hasCompletedStartupGuide = UserDefaults.standard.bool(forKey: DefaultsKey.hasCompletedStartupGuide)
+    var transcript = ""
+    var latestNotice = "Ready"
+    var startShortcut: ShortcutDefinition {
         didSet {
             startShortcut.save(to: DefaultsKey.startShortcut)
             registerShortcuts()
         }
     }
-    @Published var stopShortcut: ShortcutDefinition {
+    var stopShortcut: ShortcutDefinition {
         didSet {
             stopShortcut.save(to: DefaultsKey.stopShortcut)
             registerShortcuts()
@@ -34,10 +36,6 @@ final class VoiceFlowModel: ObservableObject {
         startShortcut = ShortcutDefinition.load(from: DefaultsKey.startShortcut) ?? .defaultStart
         stopShortcut = ShortcutDefinition.load(from: DefaultsKey.stopShortcut) ?? .defaultStop
         registerShortcuts()
-    }
-
-    deinit {
-        hotKeyCenter.unregisterAll()
     }
 
     var status: AppStatus {

@@ -1,7 +1,7 @@
 import SwiftUI
 
 struct ContentView: View {
-    @EnvironmentObject private var model: VoiceFlowModel
+    @Environment(VoiceFlowModel.self) private var model
 
     var body: some View {
         NavigationSplitView {
@@ -18,7 +18,7 @@ struct ContentView: View {
 }
 
 private struct SidebarView: View {
-    @EnvironmentObject private var model: VoiceFlowModel
+    @Environment(VoiceFlowModel.self) private var model
 
     var body: some View {
         VStack(alignment: .leading, spacing: 18) {
@@ -60,7 +60,7 @@ private struct SidebarView: View {
 }
 
 private struct StatusCardView: View {
-    @EnvironmentObject private var model: VoiceFlowModel
+    @Environment(VoiceFlowModel.self) private var model
 
     var body: some View {
         VStack(alignment: .leading, spacing: 12) {
@@ -94,9 +94,11 @@ private struct StatusCardView: View {
 }
 
 private struct TranscriptionWorkspaceView: View {
-    @EnvironmentObject private var model: VoiceFlowModel
+    @Environment(VoiceFlowModel.self) private var model
 
     var body: some View {
+        @Bindable var model = model
+
         VStack(spacing: 0) {
             HeaderBarView()
 
@@ -139,7 +141,7 @@ private struct TranscriptionWorkspaceView: View {
 }
 
 private struct HeaderBarView: View {
-    @EnvironmentObject private var model: VoiceFlowModel
+    @Environment(VoiceFlowModel.self) private var model
 
     var body: some View {
         HStack(spacing: 16) {
@@ -178,7 +180,7 @@ private struct HeaderBarView: View {
 }
 
 private struct StartupGuideView: View {
-    @EnvironmentObject private var model: VoiceFlowModel
+    @Environment(VoiceFlowModel.self) private var model
 
     var body: some View {
         ScrollView {
@@ -222,7 +224,7 @@ private struct StartupGuideView: View {
 }
 
 private struct ModelReadinessView: View {
-    @EnvironmentObject private var model: VoiceFlowModel
+    @Environment(VoiceFlowModel.self) private var model
 
     var body: some View {
         VStack(alignment: .leading, spacing: 12) {
@@ -267,9 +269,11 @@ private struct GuideStepView: View {
 }
 
 struct SettingsView: View {
-    @EnvironmentObject private var model: VoiceFlowModel
+    @Environment(VoiceFlowModel.self) private var model
 
     var body: some View {
+        @Bindable var model = model
+
         Form {
             Section("Keyboard Shortcuts") {
                 ShortcutPickerView(title: "Start recording", shortcut: $model.startShortcut)
@@ -362,5 +366,5 @@ private struct ComplianceRowView: View {
 
 #Preview {
     ContentView()
-        .environmentObject(VoiceFlowModel())
+        .environment(VoiceFlowModel())
 }

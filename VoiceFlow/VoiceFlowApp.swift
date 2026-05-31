@@ -2,12 +2,12 @@ import SwiftUI
 
 @main
 struct VoiceFlowApp: App {
-    @StateObject private var model = VoiceFlowModel()
+    @State private var model = VoiceFlowModel()
 
     var body: some Scene {
         WindowGroup {
             ContentView()
-                .environmentObject(model)
+                .environment(model)
         }
         .commands {
             CommandMenu("VoiceFlow") {
@@ -34,19 +34,19 @@ struct VoiceFlowApp: App {
 
         Settings {
             SettingsView()
-                .environmentObject(model)
+                .environment(model)
         }
 
         MenuBarExtra("VoiceFlow", systemImage: model.status.systemImage) {
             MenuBarStatusView()
-                .environmentObject(model)
+                .environment(model)
         }
         .menuBarExtraStyle(.window)
     }
 }
 
 private struct MenuBarStatusView: View {
-    @EnvironmentObject private var model: VoiceFlowModel
+    @Environment(VoiceFlowModel.self) private var model
 
     var body: some View {
         VStack(alignment: .leading, spacing: 16) {
