@@ -192,16 +192,16 @@ private struct StartupGuideView: View {
                         .foregroundStyle(.tint)
                     Text("Set up local transcription")
                         .font(.largeTitle.weight(.bold))
-                    Text("VoiceFlow is designed for private, local dictation with a bundled WhisperKit Core ML small.en model and explicit microphone control.")
+                    Text("VoiceFlow is designed for private, local dictation with an on-device WhisperKit Core ML model and explicit microphone control.")
                         .font(.title3)
                         .foregroundStyle(.secondary)
                         .fixedSize(horizontal: false, vertical: true)
                 }
 
                 LazyVGrid(columns: [GridItem(.adaptive(minimum: 240), spacing: 16)], spacing: 16) {
-                    GuideStepView(number: "1", title: "Bundle the model", detail: "Add the WhisperKit Core ML folder at Resources/Models/openai_whisper-small.en before shipping offline transcription.")
-                    GuideStepView(number: "2", title: "Grant microphone access", detail: "macOS will prompt on first recording. The app records mono 16 kHz WAV audio for the local runtime.")
-                    GuideStepView(number: "3", title: "Approve Accessibility", detail: "VoiceFlow needs Accessibility permission to paste transcribed text into Terminal, search bars, editors, and other focused apps.")
+                    GuideStepView(number: "1", title: "Confirm local model", detail: "VoiceFlow uses the speech model included with the app bundle for on-device transcription.")
+                    GuideStepView(number: "2", title: "Grant microphone access", detail: "macOS prompts on first recording. Audio is captured only while you start a dictation session.")
+                    GuideStepView(number: "3", title: "Approve Accessibility", detail: "VoiceFlow uses Accessibility only to paste your transcript into the focused text field after you stop recording.")
                     GuideStepView(number: "4", title: "Use shortcuts", detail: "Defaults are Control + Shift + J to start and Control + Shift + K to stop. You can change them in Settings.")
                     GuideStepView(number: "5", title: "Respect consent", detail: "Use transcription only where you have permission and avoid high-risk decisions from raw transcripts.")
                 }
@@ -239,7 +239,7 @@ private struct PermissionReadinessView: View {
             VStack(alignment: .leading, spacing: 8) {
                 Text(model.isAccessibilityTrusted ? "Accessibility permission ready" : "Accessibility permission required")
                     .font(.headline)
-                Text("System-wide dictation uses Accessibility to send Command + V into whichever text field is focused after transcription.")
+                Text("System-wide dictation uses Accessibility to paste your transcript into the focused text field. VoiceFlow does not read screen contents or keystrokes.")
                     .foregroundStyle(.secondary)
                 if !model.isAccessibilityTrusted {
                     Button {
@@ -267,7 +267,7 @@ private struct ModelReadinessView: View {
                 .font(.system(.callout, design: .monospaced))
                 .foregroundStyle(.secondary)
                 .textSelection(.enabled)
-            Text("The Hugging Face checkpoint includes model files and processor assets. The native runtime still needs to be connected behind the transcription service before release builds produce text.")
+            Text("VoiceFlow loads this bundled model directly from the app resources and does not download speech models at runtime.")
                 .foregroundStyle(.secondary)
         }
         .padding(18)
@@ -314,6 +314,9 @@ struct SettingsView: View {
 
             Section("System-wide Dictation") {
                 LabeledContent("Accessibility", value: model.isAccessibilityTrusted ? "Ready" : "Required")
+                Text("Accessibility is used only to paste transcripts into the app you were using. Dictation text is temporarily placed on the clipboard and the previous clipboard is restored after paste when possible.")
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
                 if !model.isAccessibilityTrusted {
                     Button("Request Accessibility Permission") {
                         model.requestAccessibilityPermission()

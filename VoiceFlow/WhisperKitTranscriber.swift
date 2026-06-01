@@ -25,38 +25,27 @@ actor WhisperKitTranscriber {
 
     #if canImport(WhisperKit)
     private func loadWhisperKit(modelBundle: WhisperModelBundle) async throws -> WhisperKit {
-        let localModelFolder = modelBundle.modelDirectory?.path
-        let requestedModelFolder = localModelFolder ?? "managed-download:small.en"
+        guard let localModelFolder = modelBundle.modelDirectory?.path else {
+            throw VoiceFlowError.modelMissing
+        }
 
-        if let whisperKit, loadedModelFolder == requestedModelFolder {
+        if let whisperKit, loadedModelFolder == localModelFolder {
             return whisperKit
         }
 
-        let config: WhisperKitConfig
-        if let localModelFolder {
-            config = WhisperKitConfig(
-                modelFolder: localModelFolder,
-                tokenizerFolder: URL(fileURLWithPath: localModelFolder),
-                verbose: false,
-                prewarm: true,
-                load: true,
-                download: false
-            )
-        } else {
-            config = WhisperKitConfig(
-                model: "small.en",
-                modelRepo: "argmaxinc/whisperkit-coreml",
-                verbose: false,
-                prewarm: true,
-                load: true,
-                download: true
-            )
-        }
+        let config = WhisperKitConfig(
+            modelFolder: localModelFolder,
+            tokenizerFolder: URL(fileURLWithPath: localModelFolder),
+            verbose: false,
+            prewarm: true,
+            load: true,
+            download: false
+        )
 
         do {
             let whisperKit = try await WhisperKit(config)
             self.whisperKit = whisperKit
-            loadedModelFolder = requestedModelFolder
+            loadedModelFolder = localModelFolder
             return whisperKit
         } catch {
             throw VoiceFlowError.runtimeNotConfigured

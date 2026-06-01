@@ -137,6 +137,8 @@ final class VoiceFlowModel {
 
     private func transcribe(_ url: URL) {
         Task {
+            defer { try? FileManager.default.removeItem(at: url) }
+
             do {
                 let text = try await transcriber.transcribe(audioURL: url, modelBundle: modelBundle)
                 transcript = text
@@ -261,6 +263,10 @@ final class WhisperTranscriptionService {
     private let whisperKitTranscriber = WhisperKitTranscriber()
 
     func transcribe(audioURL: URL, modelBundle: WhisperModelBundle) async throws -> String {
+        guard modelBundle.isAvailable else {
+            throw VoiceFlowError.modelMissing
+        }
+
         let attributes = try FileManager.default.attributesOfItem(atPath: audioURL.path)
         let byteCount = attributes[.size] as? Int64 ?? 0
         guard byteCount > 0 else {
@@ -343,9 +349,9 @@ enum VoiceFlowError: LocalizedError {
         case .emptyRecording:
             "The recording did not contain audio data."
         case .modelMissing:
-            "Bundle the WhisperKit Core ML model at Resources/Models/openai_whisper-small.en before shipping offline transcription."
+            "The local speech model is missing from the app bundle. Reinstall VoiceFlow or contact support."
         case .whisperKitMissing:
-            "Add the WhisperKit package product from https://github.com/argmaxinc/argmax-oss-swift to enable local transcription."
+            "VoiceFlow was built without its local speech runtime. Reinstall the app or contact support."
         case .runtimeNotConfigured:
             "The Whisper runtime could not be initialized. Check that the bundled model folder is complete and compatible with WhisperKit."
         case .accessibilityPermissionMissing:
